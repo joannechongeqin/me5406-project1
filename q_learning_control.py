@@ -1,11 +1,14 @@
 from frozen_lake_env import FrozenLakeEnv
+import os
 import numpy as np
 import random
 import time
+from gif_maker import create_gif_from_folder
+from grid_inputs import grid_input_4x4, grid_input_8x8, grid_input_10x10
 
 class QLearningControl:
     def __init__(self, env, alpha=0.1, epsilon=0.5, epsilon_decay=0.995, min_epsilon=0.15,
-                 gamma=0.9, num_of_episodes=1000, max_steps=100):
+                 gamma=0.9, num_of_episodes=1000, max_steps=100, plots_dir=os.path.join(os.getcwd(), "plots", "qlearning")): 
         self.env = env
         self.alpha = alpha  # step size
         self.epsilon = epsilon  # exploration rate, for epsilon-greedy policy
@@ -22,6 +25,8 @@ class QLearningControl:
 
         # counts accumulative number of times (over a set of episodes) a has been taken at s
         self.N = np.zeros((env.size, env.size, env.ACTION_SIZE)) 
+
+        self.plots_dir = plots_dir
 
     def _epsilon_greedy_policy(self, state):
         if random.uniform(0, 1) < self.epsilon:
@@ -67,76 +72,54 @@ class QLearningControl:
             progress = (i + 1) / self.num_of_episodes * 100  
             if (i + 1) % int(self.num_of_episodes * 0.05) == 0:
                 print(f"\rEpisode {i + 1}/{self.num_of_episodes} - {progress:.2f}% complete, epsilon={self.epsilon}", end='')
-                self.plot_q_values(title=f"qlearning_q_value_episode_{i + 1}", show_plot=show_plot, save_plot=save_plot, folder_name=folder_name)
-                self.plot_N_values(title=f"qlearning_N_value_episode_{i + 1}", show_plot=show_plot, save_plot=save_plot, folder_name=folder_name)
+                self.plot_q_values(title=f"qlearning_q_episode_{i + 1}", info=f"Q_value_episode_{i + 1} (num_of_episodes_{self.num_of_episodes}, max_steps_{self.max_steps}, epsilon_{self.epsilon})")
+                # self.plot_N_values(title=f"qlearning_N_episode_{i + 1}", info=f"Q_value_episode_{i + 1} (num_of_episodes_{self.num_of_episodes}, max_steps_{self.max_steps}, epsilon_{self.epsilon})")
             
-            self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
-        
+            # decay
+            # self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
+
+        create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}.gif")
         print("\nQ-Learning training complete!")
 
-    def extract_optimal_policy(self, show_plot=False, save_plot=True, folder_name=""): # deterministic  
-        self._train(show_plot=show_plot, save_plot=save_plot, folder_name=folder_name)
+    def extract_optimal_policy(self):
+        self._train()
         policy = np.zeros((self.env.size, self.env.size))
         for i in range(self.env.size):
             for j in range(self.env.size):
                 policy[i, j] = self._select_greedy_action((i, j))
+        self.env.visualize_deterministic_policy(policy=policy, title="qlearning_optimal_policy", info=f"num_of_episodes_{self.num_of_episodes}, max_steps_{self.max_steps}, epsilon_{self.epsilon}", plots_dir=self.plots_dir)
         return policy
 
-    def plot_q_values(self, title="Q(s,a) (Q-Learning)", show_plot=False, save_plot=True, folder_name=""):
-        self.env.plot_heatmap(data=self.Q, title=title, show_plot=show_plot, save_plot=save_plot, folder_name=folder_name)
+    def plot_q_values(self, title="Q(s,a) (QLearning)", info=""):
+        self.env.plot_heatmap(data=self.Q, title=title, info=info, plots_dir=self.plots_dir)
 
-    def plot_N_values(self, title="N(s,a) (SARSA)", show_plot=False, save_plot=True, folder_name=""):
-        self.env.plot_heatmap(data=self.N, title=title, show_plot=show_plot, save_plot=save_plot, folder_name=folder_name)
-
+    def plot_N_values(self, title="N(s,a) (QLearning)", info=""):
+        self.env.plot_heatmap(data=self.N, title=title, info=info, plots_dir=self.plots_dir)
 
 
 if __name__ == "__main__":
-    grid_input_4x4 = [
-            "S...",
-            ".H.H",
-            "...H",
-            "H..G"
-            ]
     
-    grid_input_8x8 = [
-        "S...HH..",
-        "..H....H",
-        "...H....",
-        ".H...H..",
-        "..HH....",
-        ".HH....H",
-        ".H..H..H",
-        "...H...G"
-    ]
+    # env_4x4 = FrozenLakeEnv(grid_input=grid_input_4x4)
+    # qlearning_4x4 = QLearningControl(env=env_4x4, num_of_episodes=5000, max_steps=5000, epsilon=0.15, plots_dir=os.path.join(os.getcwd(), "plots", "qlearning_4x4"))
+    # start_time_4x4 = time.time()
+    # policy = qlearning_4x4.extract_optimal_policy()
+    # end_time_4x4 = time.time()
+    # time_taken_4x4 = end_time_4x4 - start_time_4x4
+    # print(f"Time taken: {time_taken_4x4} seconds")
+    # print("qlearning_4x4 policy:\n", policy)
 
-    grid_input_10x10 = [
-        "S....H....",
-        "...H...H..",
-        ".H.......H",
-        "..HH..H.H.",
-        "..H.H.....",
-        "H......H.H",
-        ".HH..H....",
-        ".H...H...H",
-        "...H.H....",
-        ".H...HH..G"
-    ]
+    # env_8x8 = FrozenLakeEnv(grid_input=grid_input_8x8)
+    # qlearning_8x8 = QLearningControl(env=env_8x8, num_of_episodes=50000, max_steps=15000, epsilon=0.5, plots_dir=os.path.join(os.getcwd(), "plots", "qlearning_8x8"))
+    # start_time_8x8 = time.time()
+    # policy = qlearning_8x8.extract_optimal_policy()
+    # end_time_8x8 = time.time()
+    # time_taken_8x8 = end_time_8x8 - start_time_8x8
+    # print(f"Time taken: {time_taken_8x8} seconds")
 
-    # env = FrozenLakeEnv(grid_input=grid_input_4x4)
-    # qlearning = QLearningControl(env, num_of_episodes=1500)
-
-    env = FrozenLakeEnv(grid_input=grid_input_8x8)
-    qlearning = QLearningControl(env, num_of_episodes=10000)
-
-    env = FrozenLakeEnv(grid_input=grid_input_10x10)
-    qlearning = QLearningControl(env, num_of_episodes=10000)
-
-    start_time = time.time()
-    policy = qlearning.extract_optimal_policy(folder_name="qlearning")
-    end_time = time.time()
-    time_taken = end_time - start_time
-    print(f"Time taken: {time_taken} seconds")
-
-    print(policy)
-    env.visualize_deterministic_policy(policy, 
-            title=f"Optimal Policy from Qlearning (alpha={qlearning.alpha}, epsilon={qlearning.epsilon}, decay={qlearning.epsilon_decay}, min_epsilon={qlearning.min_epsilon}, gamma={qlearning.gamma}, episodes={qlearning.num_of_episodes}, max_steps={qlearning.max_steps})")
+    env_10x10 = FrozenLakeEnv(grid_input=grid_input_10x10)
+    qlearning_10x10 = QLearningControl(env=env_10x10, num_of_episodes=1000, max_steps=2000, epsilon=0.15, gamma=0.99, plots_dir=os.path.join(os.getcwd(), "plots", "qlearning_10x10"))
+    start_time_10x10 = time.time()
+    policy = qlearning_10x10.extract_optimal_policy()
+    end_time_10x10 = time.time()
+    time_taken_10x10 = end_time_10x10 - start_time_10x10
+    print(f"Time taken: {time_taken_10x10} seconds")

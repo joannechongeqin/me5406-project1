@@ -5,10 +5,9 @@ from matplotlib.patches import Polygon
 import matplotlib.patches as mpatches
 import random
 from collections import deque
-import shutil
 
 class FrozenLakeEnv:
-    def __init__(self, size=4, grid_input=None, plots_dir="plots"):
+    def __init__(self, size=4, grid_input=None):
         # assuming always square grid
         self.LEFT = 0
         self.RIGHT = 1
@@ -35,39 +34,28 @@ class FrozenLakeEnv:
             self._generate_random_map()
 
         self.state = self.start # initial state
-        self.visited_states = set()
-
-        self.plots_dir = plots_dir
-        if not os.path.exists(self.plots_dir):
-            os.makedirs(self.plots_dir)
 
     def reset(self):
         self.state = self.start
-        self.visited_states.clear()
         return self.state
 
     def step(self, action):
         # return new_state, reward, terminated
         new_state = (self.state[0] + self.ACTIONS[action][0], self.state[1] + self.ACTIONS[action][1])
 
-        if not (0 <= new_state[0] < self.size and 0 <= new_state[1] < self.size):
-            return self.state, -1, True # penalty for out of bounds, terminate
-        
-        self.state = new_state # within bounds, update state
+        if not (0 <= new_state[0] < self.size and 0 <= new_state[1] < self.size): # if out of bound
+            new_state = self.state  # stay in the same state
+
+        self.state = new_state # update state
         
         if self.grid[self.state] == self.HOLE: 
             return self.state, -1, True # fall into a hole
         elif self.state == self.goal: 
             return self.state, 1, True # reach the goal
 
-        # NOTE: IS THIS TOO CHEATING???
-        # if new_state in self.visited_states:
-        #     return new_state, -0.2, False  # penalty for revisiting a state
-        # else:
-        #     self.visited_states.add(new_state)
-
-        return self.state, 0, False # default, TODO: small penalty for each step taken?
-
+        # return self.state, 0, False 
+        return self.state, -0.01, False # small penalty for each step taken
+    
     def _extract_map(self, grid_input):
         self.grid = np.zeros((self.size, self.size))
         num_holes = 0
@@ -141,7 +129,7 @@ class FrozenLakeEnv:
             plt.show()
         return fig, ax
 
-    def visualize_deterministic_policy(self, policy, title="Policy Visualization", info=""):
+    def visualize_deterministic_policy(self, policy, title="Policy Visualization", info="", plots_dir=os.path.join(os.getcwd(), "plots", "policy")):
         fig, ax = self.visualize_map(show=False)
         plt.suptitle(title, fontsize=16)
         plt.title(info, fontsize=12)
@@ -149,12 +137,17 @@ class FrozenLakeEnv:
         for i in range(self.size):
             for j in range(self.size):
                 ax.text(j + 0.5, i + 0.5, directions[policy[i, j]], ha='center', va='center', color='blue', fontsize=16)
+        if not os.path.exists(plots_dir):
+            os.makedirs(plots_dir)
+        plt.savefig(os.path.join(plots_dir, f"{title}.png"))
         plt.show()
-
-    def plot_heatmap(self, data, title="", show_plot=False, save_plot=True, folder_name=""):
+        plt.close()
+        
+    def plot_heatmap(self, data, title="", info="", plots_dir=os.path.join(os.getcwd(), "plots", "heatmap")):
         rows, cols, _ = data.shape
         fig, ax = plt.subplots(figsize=(cols * 2, rows * 2))
         ax.set_title(title, fontsize=16)
+        plt.title(info, fontsize=12)
         ax.set_xlim(0, cols)
         ax.set_ylim(0, rows)
         ax.set_xticks(np.arange(cols))
@@ -231,14 +224,10 @@ class FrozenLakeEnv:
         #     mpatches.Patch(color='green', label='Goal (G)')
         # ]
         # ax.legend(handles=legend_elements, loc='upper right')
-
-        if show_plot:
-            plt.show()
-        if save_plot:
-            if not os.path.exists(os.path.join(self.plots_dir, str(folder_name))):
-                os.makedirs(os.path.join(self.plots_dir, str(folder_name)))
-            plt.savefig(os.path.join(self.plots_dir, str(folder_name), f"{title}.png"))
-            plt.close()
+        if not os.path.exists(plots_dir):
+            os.makedirs(plots_dir)
+        plt.savefig(os.path.join(plots_dir, f"{title}.png"))
+        plt.close()
         return fig, ax
         
 if __name__ == "__main__":
