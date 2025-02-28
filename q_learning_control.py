@@ -79,14 +79,18 @@ class QLearningControl:
             # self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
 
         create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}.gif")
-        print("\nQ-Learning training complete!")
+        print("Q-Learning training complete!")
 
     def extract_optimal_policy(self):
+        start_time = time.time()
         self._train()
         policy = np.zeros((self.env.size, self.env.size))
         for i in range(self.env.size):
             for j in range(self.env.size):
                 policy[i, j] = self._select_greedy_action((i, j))
+        end_time = time.time()
+        print(f"Time taken: {end_time - start_time} seconds")
+        self.env.reset()
         self.env.visualize_deterministic_policy(policy=policy, title="qlearning_optimal_policy", info=f"num_of_episodes_{self.num_of_episodes}, max_steps_{self.max_steps}, epsilon_{self.epsilon}", plots_dir=self.plots_dir)
         return policy
 
@@ -101,25 +105,12 @@ if __name__ == "__main__":
     
     # env_4x4 = FrozenLakeEnv(grid_input=grid_input_4x4)
     # qlearning_4x4 = QLearningControl(env=env_4x4, num_of_episodes=5000, max_steps=5000, epsilon=0.15, plots_dir=os.path.join(os.getcwd(), "plots", "qlearning_4x4"))
-    # start_time_4x4 = time.time()
     # policy = qlearning_4x4.extract_optimal_policy()
-    # end_time_4x4 = time.time()
-    # time_taken_4x4 = end_time_4x4 - start_time_4x4
-    # print(f"Time taken: {time_taken_4x4} seconds")
-    # print("qlearning_4x4 policy:\n", policy)
 
     # env_8x8 = FrozenLakeEnv(grid_input=grid_input_8x8)
     # qlearning_8x8 = QLearningControl(env=env_8x8, num_of_episodes=50000, max_steps=15000, epsilon=0.5, plots_dir=os.path.join(os.getcwd(), "plots", "qlearning_8x8"))
-    # start_time_8x8 = time.time()
     # policy = qlearning_8x8.extract_optimal_policy()
-    # end_time_8x8 = time.time()
-    # time_taken_8x8 = end_time_8x8 - start_time_8x8
-    # print(f"Time taken: {time_taken_8x8} seconds")
 
     env_10x10 = FrozenLakeEnv(grid_input=grid_input_10x10)
     qlearning_10x10 = QLearningControl(env=env_10x10, num_of_episodes=1000, max_steps=2000, epsilon=0.15, gamma=0.99, plots_dir=os.path.join(os.getcwd(), "plots", "qlearning_10x10"))
-    start_time_10x10 = time.time()
     policy = qlearning_10x10.extract_optimal_policy()
-    end_time_10x10 = time.time()
-    time_taken_10x10 = end_time_10x10 - start_time_10x10
-    print(f"Time taken: {time_taken_10x10} seconds")

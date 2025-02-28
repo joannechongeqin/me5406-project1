@@ -8,8 +8,8 @@ from grid_inputs import grid_input_4x4, grid_input_8x8, grid_input_10x10
 
 # first visit monte carlo without exploring starts
 class MonteCarloControl:
-    def __init__(self, env, epsilon=0.15, epsilon_decay=0.995, min_epsilon=0.15,
-                    gamma=0.99, num_of_episodes=1000, max_steps=100, plots_dir=os.path.join(os.getcwd(), "plots", "mc")): 
+    def __init__(self, env, epsilon=0.15, epsilon_decay=1.0, min_epsilon=0.15,
+                    gamma=0.95, num_of_episodes=1000, max_steps=100, plots_dir=os.path.join(os.getcwd(), "plots", "mc")): 
         self.env = env
         self.epsilon = epsilon # exploration rate, for epsilon-greedy policy
         self.epsilon_decay = epsilon_decay
@@ -109,17 +109,20 @@ class MonteCarloControl:
                 self.plot_q_values(title=f"mc_q_episode_{i + 1}", info=f"Q_value_episode_{i + 1} (num_of_episodes_{self.num_of_episodes}, max_steps_{self.max_steps}, epsilon_{self.epsilon})")
             
             # decay
-            # self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
+            self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
         
         create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}.gif")
-        print("\nMonte Carlo training complete!")
+        print("Monte Carlo training complete!")
         
     def extract_optimal_policy(self): # deterministic
+        start_time = time.time()
         self._train()
         policy = np.zeros((self.env.size, self.env.size))
         for i in range(self.env.size):
             for j in range(self.env.size):
                 policy[i, j] = self._select_greedy_action((i, j))
+        end_time = time.time()
+        print(f"Time taken: {end_time - start_time} seconds")
         self.env.visualize_deterministic_policy(policy=policy, title="mc_optimal_policy", info=f"num_of_episodes_{self.num_of_episodes}, max_steps_{self.max_steps}, epsilon_{self.epsilon}", plots_dir=self.plots_dir)
         return policy
     
@@ -131,25 +134,19 @@ if __name__ == "__main__":
     
     # env_4x4 = FrozenLakeEnv(grid_input=grid_input_4x4)
     # mc_4x4 = MonteCarloControl(env=env_4x4, num_of_episodes=5000, max_steps=5000, epsilon=0.15, plots_dir=os.path.join(os.getcwd(), "plots", "mc_4x4"))
-    # start_time_4x4 = time.time()
     # policy = mc_4x4.extract_optimal_policy()
-    # end_time_4x4 = time.time()
-    # time_taken_4x4 = end_time_4x4 - start_time_4x4
-    # print(f"Time taken: {time_taken_4x4} seconds")
-    # print("mc_4x4 policy:\n", policy)
 
     # env_8x8 = FrozenLakeEnv(grid_input=grid_input_8x8)
     # mc_8x8 = MonteCarloControl(env=env_8x8, num_of_episodes=50000, max_steps=15000, epsilon=0.5, plots_dir=os.path.join(os.getcwd(), "plots", "mc_8x8"))
-    # start_time_8x8 = time.time()
     # policy = mc_8x8.extract_optimal_policy()
-    # end_time_8x8 = time.time()
-    # time_taken_8x8 = end_time_8x8 - start_time_8x8
-    # print(f"Time taken: {time_taken_8x8} seconds")
 
     env_10x10 = FrozenLakeEnv(grid_input=grid_input_10x10)
-    mc_10x10 = MonteCarloControl(env=env_10x10, num_of_episodes=100000, max_steps=50000, epsilon=0.3, gamma=0.99, plots_dir=os.path.join(os.getcwd(), "plots", "mc_10x10"))
-    start_time_10x10 = time.time()
+    mc_10x10 = MonteCarloControl(env=env_10x10, 
+                                num_of_episodes=100000, 
+                                max_steps=1000000, 
+                                epsilon=1.0, 
+                                epsilon_decay=0.9999,
+                                min_epsilon=0.7,
+                                gamma=0.98,
+                                plots_dir=os.path.join(os.getcwd(), "plots", "mc_10x10"))
     policy = mc_10x10.extract_optimal_policy()
-    end_time_10x10 = time.time()
-    time_taken_10x10 = end_time_10x10 - start_time_10x10
-    print(f"Time taken: {time_taken_10x10} seconds")
