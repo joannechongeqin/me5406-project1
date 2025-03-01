@@ -5,10 +5,12 @@ import random
 import time
 from gif_maker import create_gif_from_folder
 from grid_inputs import grid_input_4x4, grid_input_8x8, grid_input_10x10
+from plotter import Plotter
+import matplotlib.pyplot as plt
 
 class QLearningControl:
     def __init__(self, env, alpha=0.1, epsilon=0.5, epsilon_decay=0.995, min_epsilon=0.15,
-                 gamma=0.9, num_of_episodes=1000, max_steps=100, plots_dir=os.path.join(os.getcwd(), "plots", "qlearning")): 
+                 gamma=0.95, num_of_episodes=1000, max_steps=100, plots_dir=os.path.join(os.getcwd(), "plots", "qlearning")): 
         self.env = env
         self.alpha = alpha  # step size
         self.epsilon = epsilon  # exploration rate, for epsilon-greedy policy
@@ -26,7 +28,16 @@ class QLearningControl:
         # counts accumulative number of times (over a set of episodes) a has been taken at s
         self.N = np.zeros((env.size, env.size, env.ACTION_SIZE)) 
 
+        # folder to save plots for visualization
         self.plots_dir = plots_dir
+        self.info = f"num_of_episodes_{self.num_of_episodes}, max_steps_{self.max_steps}, epsilon_{self.epsilon}"
+
+        # to store data for analysis
+        self.plotter = Plotter(self, "Q-Learning")
+        self.episodes_length = [] # length of each episode
+        self.success_count = 0
+        self.failure_count = 0
+        self.episodes_reward = [] # total reward accumulated by the agent for an episode
 
     def _epsilon_greedy_policy(self, state):
         if random.uniform(0, 1) < self.epsilon:
@@ -50,6 +61,7 @@ class QLearningControl:
             state = self.env.reset()
             step_count = 0
             terminated = False
+            episode_reward = 0
 
             # loop for each step of episode
             while not terminated and step_count < self.max_steps:
@@ -57,6 +69,8 @@ class QLearningControl:
                 action = self._epsilon_greedy_policy(state)
                 # take action A; receive R and observe S'
                 next_state, reward, terminated = self.env.step(action)
+                episode_reward += reward
+
                 # update Q(S, A) using Q-learning update rule: Q(S, A) ← Q(S, A) + α[R + γ max Q(S', A') - Q(S, A)]
                 best_next_action = self._select_greedy_action(next_state)         
                 self.Q[state[0], state[1], action] += self.alpha * (
@@ -73,12 +87,21 @@ class QLearningControl:
             if (i + 1) % int(self.num_of_episodes * 0.05) == 0:
                 print(f"\rEpisode {i + 1}/{self.num_of_episodes} - {progress:.2f}% complete, epsilon={self.epsilon}", end='')
                 self.plot_q_values(title=f"qlearning_q_episode_{i + 1}", info=f"Q_value_episode_{i + 1} (num_of_episodes_{self.num_of_episodes}, max_steps_{self.max_steps}, epsilon_{self.epsilon})")
-                # self.plot_N_values(title=f"qlearning_N_episode_{i + 1}", info=f"Q_value_episode_{i + 1} (num_of_episodes_{self.num_of_episodes}, max_steps_{self.max_steps}, epsilon_{self.epsilon})")
+                self.plot_N_values(title=f"qlearning_N_episode_{i + 1}", info=f"Q_value_episode_{i + 1} (num_of_episodes_{self.num_of_episodes}, max_steps_{self.max_steps}, epsilon_{self.epsilon})")
             
             # decay
-            # self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
+            self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
 
-        create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}.gif")
+            # data for analysis
+            if reward == 1: # final reward
+                self.success_count += 1
+            else:
+                self.failure_count += 1
+            self.episodes_length.append(step_count)
+            self.episodes_reward.append(episode_reward)
+
+        create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}_q.gif")
+        create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}_N.gif")
         print("Q-Learning training complete!")
 
     def extract_optimal_policy(self):
@@ -112,5 +135,14 @@ if __name__ == "__main__":
     # policy = qlearning_8x8.extract_optimal_policy()
 
     env_10x10 = FrozenLakeEnv(grid_input=grid_input_10x10)
-    qlearning_10x10 = QLearningControl(env=env_10x10, num_of_episodes=1000, max_steps=2000, epsilon=0.15, gamma=0.99, plots_dir=os.path.join(os.getcwd(), "plots", "qlearning_10x10"))
+    qlearning_10x10 = QLearningControl(env=env_10x10, 
+                                       num_of_episodes=10000, 
+                                       max_steps=2000, 
+                                       epsilon=0.15, 
+                                       min_epsilon=0.1,
+                                       gamma=0.99, 
+                                       plots_dir=os.path.join(os.getcwd(), "plots", "qlearning_10x10"))
     policy = qlearning_10x10.extract_optimal_policy()
+    qlearning_10x10.plotter.plot_cummulative_average_rewards()
+    qlearning_10x10.plotter.plot_episode_lengths()
+    qlearning_10x10.plotter.plot_success_failure_rate()

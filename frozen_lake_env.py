@@ -7,7 +7,7 @@ import random
 from collections import deque
 
 class FrozenLakeEnv:
-    def __init__(self, size=4, grid_input=None):
+    def __init__(self, size=4, grid_input=None, step_penalty=False):
         # assuming always square grid
         self.LEFT = 0
         self.RIGHT = 1
@@ -18,6 +18,7 @@ class FrozenLakeEnv:
         self.ACTION_SIZE = len(self.ACTIONS)
         self.HOLE_STATE_RATIO = 0.25 # proportion between the number of holes and the number of states should be 25%
         self.HOLE = -1
+        self.step_penalty = step_penalty
         
         if grid_input:
             # grid_input in the format of a list of strings, each string representing a row of the grid, and (S: start, G: goal, H: hole)
@@ -53,8 +54,10 @@ class FrozenLakeEnv:
         elif self.state == self.goal: 
             return self.state, 1, True # reach the goal
 
-        # return self.state, 0, False 
-        return self.state, -0.01, False # small penalty for each step taken
+        if self.step_penalty:
+            return self.state, -0.01, False # small penalty for each step taken
+        return self.state, 0, False 
+
     
     def _extract_map(self, grid_input):
         self.grid = np.zeros((self.size, self.size))

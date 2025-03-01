@@ -5,10 +5,11 @@ import random
 import os
 from gif_maker import create_gif_from_folder
 from grid_inputs import grid_input_4x4, grid_input_8x8, grid_input_10x10
+from plotter import Plotter
 
 # first visit monte carlo without exploring starts
 class MonteCarloControl:
-    def __init__(self, env, epsilon=0.15, epsilon_decay=1.0, min_epsilon=0.15,
+    def __init__(self, env, epsilon=0.15, epsilon_decay=0.995, min_epsilon=0.15,
                     gamma=0.95, num_of_episodes=1000, max_steps=100, plots_dir=os.path.join(os.getcwd(), "plots", "mc")): 
         self.env = env
         self.epsilon = epsilon # exploration rate, for epsilon-greedy policy
@@ -30,7 +31,16 @@ class MonteCarloControl:
         # -> returns[(i, j)][a] = list of returns for taking action a at state (i, j)
         self.returns = { (i, j): { a: [] for a in env.ACTION_KEYS } for i in range(env.size) for j in range(env.size) }
 
+        # folder to save plots for visualization
         self.plots_dir = plots_dir
+        self.info = f"num_of_episodes_{self.num_of_episodes}, max_steps_{self.max_steps}, epsilon_{self.epsilon}"
+
+        # to store data for analysis
+        self.plotter = Plotter(self, "MC")
+        self.episodes_length = [] # length of each episode
+        self.success_count = 0
+        self.failure_count = 0
+        self.episodes_reward = [] # total reward accumulated by the agent for an episode (is 1 or 0 without step_penalty)
 
     def _epsilon_greedy_policy(self, state):
         if random.uniform(0, 1) < self.epsilon:
@@ -49,6 +59,7 @@ class MonteCarloControl:
         state = self.env.reset()
         step_count = 0
         terminated = False
+        episode_reward = 0
         while not terminated and step_count < self.max_steps:
             # weights = self.policy[state[0], state[1], :]
             # normalized_weights = weights/ sum(weights)
@@ -57,6 +68,16 @@ class MonteCarloControl:
             episode.append((state, action, reward))
             state = next_state
             step_count += 1
+            episode_reward += reward
+        
+        # data for analysis
+        if reward == 1: # final reward
+            self.success_count += 1
+        else:
+            self.failure_count += 1
+        self.episodes_length.append(step_count)
+        self.episodes_reward.append(episode_reward)
+
         state = self.env.reset()
         return episode
 
@@ -106,12 +127,12 @@ class MonteCarloControl:
             progress = (i + 1) / self.num_of_episodes * 100  # Percentage completion
             if (i + 1) % int(self.num_of_episodes * 0.025) == 0:
                 print(f"\rEpisode {i + 1}/{self.num_of_episodes} - {progress:.2f}% complete, epsilon={self.epsilon}", end='')
-                self.plot_q_values(title=f"mc_q_episode_{i + 1}", info=f"Q_value_episode_{i + 1} (num_of_episodes_{self.num_of_episodes}, max_steps_{self.max_steps}, epsilon_{self.epsilon})")
+                self.plot_q_values(title=f"mc_q_episode_{i + 1}", info=f"Q_value_episode_{i + 1} ({self.info})")
             
-            # decay
+            # decay 
             self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
-        
-        create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}.gif")
+
+        create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}_q.gif")
         print("Monte Carlo training complete!")
         
     def extract_optimal_policy(self): # deterministic
@@ -123,7 +144,7 @@ class MonteCarloControl:
                 policy[i, j] = self._select_greedy_action((i, j))
         end_time = time.time()
         print(f"Time taken: {end_time - start_time} seconds")
-        self.env.visualize_deterministic_policy(policy=policy, title="mc_optimal_policy", info=f"num_of_episodes_{self.num_of_episodes}, max_steps_{self.max_steps}, epsilon_{self.epsilon}", plots_dir=self.plots_dir)
+        self.env.visualize_deterministic_policy(policy=policy, title="mc_optimal_policy", info=self.info, plots_dir=self.plots_dir)
         return policy
     
     def plot_q_values(self, title="Q(s,a) (MC)", info=""):
@@ -132,9 +153,13 @@ class MonteCarloControl:
 
 if __name__ == "__main__":
     
-    # env_4x4 = FrozenLakeEnv(grid_input=grid_input_4x4)
-    # mc_4x4 = MonteCarloControl(env=env_4x4, num_of_episodes=5000, max_steps=5000, epsilon=0.15, plots_dir=os.path.join(os.getcwd(), "plots", "mc_4x4"))
-    # policy = mc_4x4.extract_optimal_policy()
+    env_4x4 = FrozenLakeEnv(grid_input=grid_input_4x4)
+    mc_4x4 = MonteCarloControl(env=env_4x4, num_of_episodes=5000, max_steps=5000, epsilon=0.15, plots_dir=os.path.join(os.getcwd(), "plots", "mc_4x4"))
+    policy = mc_4x4.extract_optimal_policy()
+
+    mc_4x4.plotter.plot_episode_lengths()
+    mc_4x4.plotter.plot_cummulative_average_rewards()
+    mc_4x4.plotter.plot_success_failure_rate()
 
     # env_8x8 = FrozenLakeEnv(grid_input=grid_input_8x8)
     # mc_8x8 = MonteCarloControl(env=env_8x8, num_of_episodes=50000, max_steps=15000, epsilon=0.5, plots_dir=os.path.join(os.getcwd(), "plots", "mc_8x8"))
@@ -142,11 +167,15 @@ if __name__ == "__main__":
 
     env_10x10 = FrozenLakeEnv(grid_input=grid_input_10x10)
     mc_10x10 = MonteCarloControl(env=env_10x10, 
-                                num_of_episodes=100000, 
-                                max_steps=1000000, 
-                                epsilon=1.0, 
+                                num_of_episodes=50000, 
+                                max_steps=1000, 
+                                epsilon=0.8, 
                                 epsilon_decay=0.9999,
-                                min_epsilon=0.7,
+                                min_epsilon=0.5,
                                 gamma=0.98,
                                 plots_dir=os.path.join(os.getcwd(), "plots", "mc_10x10"))
     policy = mc_10x10.extract_optimal_policy()
+
+    # mc_10x10.plotter.plot_episode_lengths()
+    # mc_10x10.plotter.plot_cummulative_average_rewards()
+    # mc_10x10.plotter.plot_success_failure_rate()
