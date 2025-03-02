@@ -2,121 +2,147 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 
-class Plotter:
-    def __init__(self, rl_agent, name):
-        self.rl_agent = rl_agent
-        self.name = name
-
-    def plot_success_failure_rate(self, show=False):
-        success_percentage = (self.rl_agent.success_count / self.rl_agent.num_of_episodes) * 100
-        failure_percentage = (self.rl_agent.failure_count / self.rl_agent.num_of_episodes) * 100
-        bars = plt.bar(['Success', 'Failed'], [success_percentage, failure_percentage])
-        plt.xlabel('Result')
-        plt.ylabel('Percentage')
-        plt.suptitle(f'Success and Failed Rate during Training ({self.name})', fontsize=16)
-        plt.title(self.rl_agent.info, fontsize=10)
-        plt.bar_label(bars, labels=[f"{self.rl_agent.success_count} / {self.rl_agent.num_of_episodes} ({success_percentage:.2f}%)", f"{self.rl_agent.failure_count} / {self.rl_agent.num_of_episodes} ({failure_percentage:.2f}%)"])
-        plt.savefig(os.path.join(self.rl_agent.plots_dir, 'success_failure_rate.png'))
-        if show:
-            plt.show()
-        plt.close()
-
-    def plot_episode_lengths(self, show=False):
-        average_length = np.mean(self.rl_agent.episodes_length)
-        # plt.figure(figsize=(15, 5))
-        # plt.plot(self.rl_agent.episodes_length)
-        plt.scatter(range(len(self.rl_agent.episodes_length)), self.rl_agent.episodes_length, s=10)
-        plt.xlabel('Episode')
-        plt.ylabel('Episode Length')
-        plt.suptitle(f'Episode Length over Time ({self.name})', fontsize=16)
-        plt.title(self.rl_agent.info, fontsize=10)
-        plt.axhline(y=average_length, color='r', linestyle='--', label=f'Average Episode Length: {average_length:.2f}')
-        plt.legend()
-        plt.grid(True)
-        plt.savefig(os.path.join(self.rl_agent.plots_dir, 'episode_lengths.png'))
-        if show:
-            plt.show()
-        plt.close()
-    
-    def plot_cummulative_average_rewards(self, show=False):
-        # average reward obtained by the agent up to the current episode
-        cummulative_rewards = np.cumsum(self.rl_agent.episodes_reward)
-        cummulative_average_rewards = cummulative_rewards / np.arange(1, len(cummulative_rewards) + 1)
-        plt.plot(cummulative_average_rewards)
-        plt.xlabel('Episode')
-        plt.ylabel('Average Reward')
-        plt.suptitle(f'Average Reward over Time ({self.name})', fontsize=16)
-        plt.title(self.rl_agent.info, fontsize=10)
-        plt.grid(True)
-        plt.savefig(os.path.join(self.rl_agent.plots_dir, 'cummulative_average_rewards.png'))
-        if show:
-            plt.show()
-        plt.close()
-
-class ComparePlotter:
+class BasePlotter:
     def __init__(self, rl_agents, names):
         self.rl_agents = rl_agents
         self.names = names
 
-    def plot_success_failure_rate(self, show=False):
-        success_percentages = [(agent.success_count / agent.num_of_episodes) * 100 for agent in self.rl_agents]
-        failure_percentages = [(agent.failure_count / agent.num_of_episodes) * 100 for agent in self.rl_agents]
-        
-        x = np.arange(len(self.rl_agents))
-        width = 0.35
+    def _moving_average_with_edge_padding(self, data, window_size=50):
+        moving_average = np.convolve(data, np.ones(window_size)/window_size, mode='valid')
+        padding = (window_size - 1) // 2
+        return np.pad(moving_average, (padding, padding), mode='edge')
 
-        fig, ax = plt.subplots()
-        bars1 = ax.bar(x - width/2, success_percentages, width, label='Success')
-        bars2 = ax.bar(x + width/2, failure_percentages, width, label='Failed')
-
-        ax.set_xlabel('Agents')
-        ax.set_ylabel('Percentage')
-        ax.set_title('Success and Failure Rate during Training')
-        ax.set_xticks(x)
-        ax.set_xticklabels(self.names)
-        ax.legend()
-
-        for bars in [bars1, bars2]:
-            ax.bar_label(bars, padding=3)
-
-        plt.savefig(os.path.join(self.rl_agents[0].plots_dir, 'compare_success_failure_rate.png'))
+    def save_plot(self, filename, show=False):
+        plt.savefig(os.path.join(self.rl_agents[0].plots_dir, filename))
         if show:
             plt.show()
         plt.close()
 
-    def plot_episode_lengths(self, show=False):
-        fig, ax = plt.subplots()
+    def save_plot_to_parent_folder(self, filename, show=False):
+        plt.savefig(os.path.join(self.rl_agents[0].plots_dir, "..", filename))
+        if show:
+            plt.show()
+        plt.close()
+
+class Plotter(BasePlotter):
+    def __init__(self, rl_agent, name):
+        super().__init__([rl_agent], [name])
+        self.rl_agent = rl_agent
+        self.name = name
+
+    def plot_episodic_average_reward_over_time(self, window_size=50, show=False):
+        episodic_average_reward = np.array(self.rl_agent.episodes_reward) / np.array(self.rl_agent.episodes_length)
+        smoothed_reward = self._moving_average_with_edge_padding(episodic_average_reward, window_size)
+        plt.figure(figsize=(10, 6))
+        plt.plot(smoothed_reward, label='Episodic Average Reward', color='green', linewidth=2)
+        plt.xlabel('Episodes')
+        plt.ylabel('Average Reward (Reward per Step for each Episode)')
+        plt.title(f'Episodic Average Reward Over Time ({self.name}, smoothed with window size {window_size})')
+        plt.axhline(y=np.mean(episodic_average_reward), color='r', linestyle='--', label=f'Average Episodic Average Reward: {np.mean(episodic_average_reward):.2f}')
+        plt.legend()
+        plt.grid(True)
+        self.save_plot('episodic_average_reward.png', show)
+
+    def plot_episode_length_over_time(self, window_size=50, show=False):
+        average_length = np.mean(self.rl_agent.episodes_length)
+        smoothed_length = self._moving_average_with_edge_padding(self.rl_agent.episodes_length, window_size=50)
+        plt.figure(figsize=(10, 6))
+        plt.plot(smoothed_length, label='Episode Length', color='blue', linewidth=2)
+        plt.xlabel('Episode')
+        plt.ylabel('Episode Length')
+        plt.suptitle(f'Episode Length over Time ({self.name}, smoothed with window size {window_size})', fontsize=16)
+        plt.title(self.rl_agent.info, fontsize=10)
+        plt.axhline(y=average_length, color='r', linestyle='--', label=f'Average Episode Length: {average_length:.2f}')
+        plt.legend()
+        plt.grid(True)
+        self.save_plot('episode_lengths.png', show)
+
+    def plot_success_failure_bar(self, show=False):
+        num_of_episodes = self.rl_agent.num_of_episodes
+        success_count = sum(self.rl_agent.success)
+        failure_count = num_of_episodes - success_count
+        success_percentage = (success_count / num_of_episodes) * 100
+        failure_percentage = ((failure_count) / num_of_episodes) * 100
+        bars = plt.bar(['Success', 'Failure'], [success_percentage, failure_percentage])
+        plt.xlabel('Result')
+        plt.ylabel('Percentage')
+        plt.suptitle(f'Success and Failure Rate (during Training) ({self.name})', fontsize=16)
+        plt.title(self.rl_agent.info, fontsize=10)
+        plt.bar_label(bars, labels=[f"{success_count} / {num_of_episodes} ({success_percentage:.2f}%)", 
+                                    f"{failure_count} / {num_of_episodes} ({failure_percentage:.2f}%)"])
+        self.save_plot('success_failure_rate.png', show)
+
+    def plot_success_rate_over_time(self, show=False):
+        success_rate = np.cumsum(self.rl_agent.success) / np.arange(1, len(self.rl_agent.success) + 1) * 100
+        plt.figure(figsize=(10, 6))
+        plt.plot(success_rate, label='Success Rate', color='blue', linewidth=2)
+        plt.xlabel('Episodes')
+        plt.ylabel('Success Rate (%)')
+        plt.title(f'Success Rate Over Time ({self.name})')
+        plt.legend()
+        plt.grid(True)
+        self.save_plot('success_rate_over_time.png', show)
+
+class ComparePlotter(BasePlotter):
+    def __init__(self, rl_agents, names):
+        super().__init__(rl_agents, names)
+
+    def plot_episode_lengths_over_time(self, window_size=50, show=False):
+        fig, ax = plt.subplots(figsize=(10, 6))
         for i, agent in enumerate(self.rl_agents):
             average_length = np.mean(agent.episodes_length)
-            ax.scatter(range(len(agent.episodes_length)), agent.episodes_length, s=10, label=f'{self.names[i]} (Avg: {average_length:.2f})')
-            ax.axhline(y=average_length, linestyle='--')
-
+            smoothed_length = self._moving_average_with_edge_padding(agent.episodes_length, window_size)
+            line = ax.plot(smoothed_length, label=f'Episode Length ({self.names[i]})', linewidth=2)
+            color = line[0].get_color()
+            ax.axhline(y=average_length, linestyle='--', color=color, label=f'Avg Episode Length ({self.names[i]}): {average_length:.2f}')
         ax.set_xlabel('Episode')
         ax.set_ylabel('Episode Length')
-        ax.set_title('Episode Length over Time')
+        ax.set_title(f'Episode Length over Time (smoothed with window size {window_size})')
         ax.legend()
         ax.grid(True)
+        self.save_plot('compare_episode_lengths.png', show)
 
-        plt.savefig(os.path.join(self.rl_agents[0].plots_dir, 'compare_episode_lengths.png'))
-        if show:
-            plt.show()
-        plt.close()
-
-    def plot_cummulative_average_rewards(self, show=False):
-        fig, ax = plt.subplots()
+    def plot_success_failure_bars(self, show=False):
+        fig, ax = plt.subplots(figsize=(10, 8))
         for i, agent in enumerate(self.rl_agents):
-            cummulative_rewards = np.cumsum(agent.episodes_reward)
-            cummulative_average_rewards = cummulative_rewards / np.arange(1, len(cummulative_rewards) + 1)
-            ax.plot(cummulative_average_rewards, label=self.names[i])
+            num_of_episodes = agent.num_of_episodes
+            success_count = sum(agent.success)
+            failure_count = num_of_episodes - success_count
+            success_percentage = (success_count / num_of_episodes) * 100
+            failure_percentage = (failure_count / num_of_episodes) * 100
+            bars = ax.bar([f'Success ({self.names[i]})', f'Failure ({self.names[i]})'], 
+                        [success_percentage, failure_percentage], label=self.names[i])
+            ax.bar_label(bars, labels=[f"{success_count} / {num_of_episodes} ({success_percentage:.2f}%)", 
+                                    f"{failure_count} / {num_of_episodes} ({failure_percentage:.2f}%)"])
+        ax.set_xlabel('Result')
+        ax.set_ylabel('Percentage')
+        ax.set_title('Success and Failure Rate during Training')
+        ax.legend()
+        self.save_plot_to_parent_folder('compare_success_failure_rate.png', show)
 
-        ax.set_xlabel('Episode')
-        ax.set_ylabel('Average Reward')
-        ax.set_title('Average Reward over Time')
+    def plot_success_rate_over_time(self, show=False):
+        fig, ax = plt.subplots(figsize=(10, 6))
+        for i, agent in enumerate(self.rl_agents):
+            success_rate = np.cumsum(agent.success) / np.arange(1, len(agent.success) + 1) * 100
+            ax.plot(success_rate, label=f'Success Rate ({self.names[i]})', linewidth=2)
+        ax.set_xlabel('Episodes')
+        ax.set_ylabel('Success Rate (%)')
+        ax.set_title('Success Rate Over Time')
         ax.legend()
         ax.grid(True)
+        self.save_plot_to_parent_folder('compare_success_rate_over_time.png', show)
 
-        plt.savefig(os.path.join(self.rl_agents[0].plots_dir, 'compare_cummulative_average_rewards.png'))
-        if show:
-            plt.show()
-        plt.close()
-        
+    def plot_episodic_average_reward_over_time(self, window_size=50, show=False):
+        fig, ax = plt.subplots(figsize=(10, 6))
+        for i, agent in enumerate(self.rl_agents):
+            episodic_average_reward = np.array(agent.episodes_reward) / np.array(agent.episodes_length)
+            smoothed_reward = self._moving_average_with_edge_padding(episodic_average_reward, window_size)
+            line = ax.plot(smoothed_reward, label=f'Episodic Average Reward ({self.names[i]})', linewidth=2)
+            color = line[0].get_color()
+            ax.axhline(y=np.mean(episodic_average_reward), linestyle='--', color=color, label=f'Overall Avg Reward ({self.names[i]}): {np.mean(episodic_average_reward):.2f}')
+        ax.set_xlabel('Episodes')
+        ax.set_ylabel('Average Reward (Reward per Step for each Episode)')
+        ax.set_title(f'Episodic Average Reward Over Time (smoothed with window size {window_size})')
+        ax.legend()
+        ax.grid(True)
+        self.save_plot_to_parent_folder('compare_episodic_average_reward.png', show)
