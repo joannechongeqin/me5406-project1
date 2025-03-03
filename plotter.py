@@ -31,7 +31,7 @@ class Plotter(BasePlotter):
         self.rl_agent = rl_agent
         self.name = name
 
-    def plot_episodic_reward_over_time(self, window_size=50, show=False):
+    def plot_episodic_reward_over_time(self, window_size=50, show=False, save=True):
         smoothed_reward = self._moving_average(self.rl_agent.episodes_reward, window_size)
         plt.figure(figsize=(10, 6))
         plt.plot(smoothed_reward, label='Episodic Reward', color='green', linewidth=2)
@@ -41,9 +41,10 @@ class Plotter(BasePlotter):
         plt.axhline(y=np.mean(self.rl_agent.episodes_reward), color='r', linestyle='--', label=f'Average Episodic Reward: {np.mean(self.rl_agent.episodes_reward):.2f}')
         plt.legend()
         plt.grid(True)
-        self.save_plot('episodic_reward.png', show)
+        if save:
+            self.save_plot('episodic_reward.png', show)
 
-    def plot_episode_length_over_time(self, window_size=50, show=False):
+    def plot_episode_length_over_time(self, window_size=50, show=False, save=True):
         average_length = np.mean(self.rl_agent.episodes_length)
         smoothed_length = self._moving_average(self.rl_agent.episodes_length, window_size=50)
         plt.figure(figsize=(10, 6))
@@ -56,9 +57,10 @@ class Plotter(BasePlotter):
         plt.axhline(y=average_length, color='r', linestyle='--', label=f'Average Episode Length: {average_length:.2f}')
         plt.legend()
         plt.grid(True)
-        self.save_plot('episode_lengths.png', show)
+        if save:
+            self.save_plot('episode_lengths.png', show)
 
-    def plot_success_failure_bar(self, show=False):
+    def plot_success_failure_bar(self, show=False, save=True):
         num_of_episodes = self.rl_agent.num_of_episodes
         success_count = sum(self.rl_agent.success)
         failure_count = num_of_episodes - success_count
@@ -71,9 +73,10 @@ class Plotter(BasePlotter):
         plt.title(self.rl_agent.info, fontsize=10)
         plt.bar_label(bars, labels=[f"{success_count} / {num_of_episodes} ({success_percentage:.2f}%)", 
                                     f"{failure_count} / {num_of_episodes} ({failure_percentage:.2f}%)"])
-        self.save_plot('success_failure_rate.png', show)
+        if save:
+            self.save_plot('success_failure_rate.png', show)
 
-    def plot_success_rate_over_time(self, show=False):
+    def plot_success_rate_over_time(self, show=False, save=True):
         success_rate = np.cumsum(self.rl_agent.success) / np.arange(1, len(self.rl_agent.success) + 1) * 100
         plt.figure(figsize=(10, 6))
         plt.plot(success_rate, label='Success Rate', color='blue', linewidth=2)
@@ -82,13 +85,14 @@ class Plotter(BasePlotter):
         plt.title(f'Success Rate Over Time for {self.env_size}x{self.env_size} grid ({self.name})')
         plt.legend()
         plt.grid(True)
-        self.save_plot('success_rate_over_time.png', show)
+        if save:
+            self.save_plot('success_rate_over_time.png', show)
 
 class ComparePlotter(BasePlotter):
     def __init__(self, rl_agents, names):
         super().__init__(rl_agents, names)
 
-    def plot_episode_lengths_over_time(self, window_size=50, show=False):
+    def plot_episode_lengths_over_time(self, window_size=50, show=False, save=True):
         fig, ax = plt.subplots(figsize=(10, 6))
         for i, agent in enumerate(self.rl_agents):
             average_length = np.mean(agent.episodes_length)
@@ -101,9 +105,10 @@ class ComparePlotter(BasePlotter):
         ax.set_title(f'Episode Length over Time for {self.env_size}x{self.env_size} grid (smoothed with window size {window_size})')
         ax.legend()
         ax.grid(True)
-        self.save_plot_to_parent_folder(f'compare_episode_lengths_{self.env_size}x{self.env_size}.png', show)
+        if save:
+            self.save_plot_to_parent_folder(f'compare_episode_lengths_{self.env_size}x{self.env_size}.png', show)
 
-    def plot_success_failure_bars(self, show=False):
+    def plot_success_failure_bars(self, show=False, save=True):
         fig, ax = plt.subplots(figsize=(10, 8))
         for i, agent in enumerate(self.rl_agents):
             num_of_episodes = agent.num_of_episodes
@@ -119,9 +124,10 @@ class ComparePlotter(BasePlotter):
         ax.set_ylabel('Percentage')
         ax.set_title(f'Success and Failure Rate during Training for {self.env_size}x{self.env_size} grid')
         ax.legend()
-        self.save_plot_to_parent_folder(f'compare_success_failure_rate_{self.env_size}x{self.env_size}.png', show)
+        if save:
+            self.save_plot_to_parent_folder(f'compare_success_failure_rate_{self.env_size}x{self.env_size}.png', show)
 
-    def plot_success_rate_over_time(self, show=False):
+    def plot_success_rate_over_time(self, show=False, save=True):
         fig, ax = plt.subplots(figsize=(10, 6))
         for i, agent in enumerate(self.rl_agents):
             success_rate = np.cumsum(agent.success) / np.arange(1, len(agent.success) + 1) * 100
@@ -131,9 +137,10 @@ class ComparePlotter(BasePlotter):
         ax.set_title(f'Success Rate Over Time for {self.env_size}x{self.env_size} grid')
         ax.legend()
         ax.grid(True)
-        self.save_plot_to_parent_folder(f'compare_success_rate_over_time_{self.env_size}x{self.env_size}.png', show)
+        if save:
+            self.save_plot_to_parent_folder(f'compare_success_rate_over_time_{self.env_size}x{self.env_size}.png', show)
 
-    def plot_episodic_reward_over_time(self, window_size=50, show=False):
+    def plot_episodic_reward_over_time(self, window_size=50, show=False, save=True):
         fig, ax = plt.subplots(figsize=(10, 6))
         for i, agent in enumerate(self.rl_agents):
             smoothed_reward = self._moving_average(agent.episodes_reward, window_size)
@@ -145,4 +152,5 @@ class ComparePlotter(BasePlotter):
         ax.set_title(f'Episodic Reward Over Time for {self.env_size}x{self.env_size} grid (smoothed with window size {window_size})')
         ax.legend()
         ax.grid(True)
-        self.save_plot_to_parent_folder(f'compare_episodic_reward_{self.env_size}x{self.env_size}.png', show)
+        if save:
+            self.save_plot_to_parent_folder(f'compare_episodic_reward_{self.env_size}x{self.env_size}.png', show)
