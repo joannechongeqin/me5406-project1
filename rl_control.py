@@ -5,13 +5,13 @@ import random
 from plotter import Plotter
 
 class RLControl:
-    def __init__(self, env, alpha=0.1, epsilon=0.15, # epsilon_decay=0.995, min_epsilon=0.15,
+    def __init__(self, env, alpha=0.1, epsilon=0.15, epsilon_decay=1.0, min_epsilon=0.1,
                  gamma=0.95, num_of_episodes=1000, max_steps=100, plots_dir=None, algorithm_name="RL"):
         self.env = env
         self.alpha = alpha  # step size
         self.epsilon = epsilon  # exploration rate, for epsilon-greedy policy
-        # self.epsilon_decay = epsilon_decay
-        # self.min_epsilon = min_epsilon  # minimum value of epsilon after decay
+        self.epsilon_decay = epsilon_decay
+        self.min_epsilon = min_epsilon  # minimum value of epsilon after decay
         self.gamma = gamma  # discount factor
         self.num_of_episodes = num_of_episodes
         self.max_steps = max_steps

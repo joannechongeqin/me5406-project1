@@ -49,7 +49,7 @@ class SarsaControl(RLControl):
                 self.plot_N_values(title=f"{self.algorithm_name.lower()}_N_episode_{i + 1}", info=f"N_value_episode_{i + 1} ({self.info})")
 
             # decay
-            # self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
+            self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
 
             
             # data for analysis
@@ -61,8 +61,8 @@ class SarsaControl(RLControl):
             self.episodes_reward.append(episode_reward)
 
         print(f"\n{self.algorithm_name} training complete!")
-        create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}_q.gif", "q")
-        create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}_N.gif", "N")
+        create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}_q.gif", "q_episode")
+        create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}_N.gif", "N_episode")
         
 
 if __name__ == "__main__":
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     policy = sarsa_4x4.extract_optimal_policy()
 
     sarsa_4x4.plotter.plot_episode_length_over_time()
-    sarsa_4x4.plotter.plot_episodic_average_reward_over_time()
+    sarsa_4x4.plotter.plot_episodic_reward_over_time()
     sarsa_4x4.plotter.plot_success_rate_over_time()
     sarsa_4x4.plotter.plot_success_failure_bar()
 
@@ -89,6 +89,6 @@ if __name__ == "__main__":
     policy = sarsa_10x10.extract_optimal_policy()
 
     sarsa_10x10.plotter.plot_episode_length_over_time()
-    sarsa_10x10.plotter.plot_episodic_average_reward_over_time()
+    sarsa_10x10.plotter.plot_episodic_reward_over_time()
     sarsa_10x10.plotter.plot_success_rate_over_time()
     sarsa_10x10.plotter.plot_success_failure_bar()

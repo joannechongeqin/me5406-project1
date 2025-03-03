@@ -94,10 +94,10 @@ class MonteCarloControl(RLControl):
                 self.plot_q_values(title=f"{self.algorithm_name.lower()}_q_episode_{i + 1}", info=f"Q_value_episode_{i + 1} ({self.info})")
             
             # decay 
-            # self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
+            self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
 
         print(f"\n{self.algorithm_name} training complete!")
-        create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}_q.gif", "q")
+        create_gif_from_folder(self.plots_dir, f"{os.path.basename(self.plots_dir)}_q.gif", "q_episode")
         
 
 if __name__ == "__main__":
@@ -109,8 +109,8 @@ if __name__ == "__main__":
                                plots_dir=os.path.join(os.getcwd(), "plots", "mc_4x4"))
     policy = mc_4x4.extract_optimal_policy()
 
-    mc_4x4.plotter.plot_episode_length_over_time()
-    mc_4x4.plotter.plot_episodic_average_reward_over_time()
+    mc_4x4.plotter.plot_episode_length_over_time(show=True)
+    mc_4x4.plotter.plot_episodic_reward_over_time()
     mc_4x4.plotter.plot_success_rate_over_time()
     mc_4x4.plotter.plot_success_failure_bar()
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
                                  plots_dir=os.path.join(os.getcwd(), "plots", "mc_10x10"))
     policy = mc_10x10.extract_optimal_policy()
 
-    mc_10x10.plotter.plot_episode_length_over_time()
-    mc_10x10.plotter.plot_episodic_average_reward_over_time()
+    mc_10x10.plotter.plot_episode_length_over_time(show=True)
+    mc_10x10.plotter.plot_episodic_reward_over_time()
     mc_10x10.plotter.plot_success_rate_over_time()
     mc_10x10.plotter.plot_success_failure_bar()
