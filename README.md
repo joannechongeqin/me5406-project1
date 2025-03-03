@@ -10,8 +10,9 @@ This project explores the Frozen Lake problem and its variations using deep lear
 - Q-Learning with an $\epsilon$-greedy Behavior Policy
 
 ### How To Run
-1. Install dependencies
+1. Create your own python environment 
+2. Install dependencies
 ```
-pip install -r requirements.txt
+pip install -r environment.yml
 ```
-2. Run ```main.ipynb```
+3. Run ```main.ipynb```
