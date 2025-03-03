@@ -11,6 +11,14 @@ This project explores the Frozen Lake problem and its variations using deep lear
 
 ### How To Run
 1. Create your own python environment 
+```
+python -m venv frozen-lake
+```
+OR
+```
+conda create --name frozen-lake python=3.10
+conda activate frozen-lake
+```
 2. Install dependencies
 ```
 pip install -r environment.yml
