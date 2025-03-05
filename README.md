@@ -11,7 +11,6 @@ This project explores the Frozen Lake problem and its variations using deep lear
 
 ### How To Run
 1. Install Conda https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html
-```
 2. Install dependencies
 ```
 conda env create -f environment.yml
